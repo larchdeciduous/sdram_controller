@@ -1,0 +1,6 @@
+*.history
+_build/
+hardware.*
+*.json
+mytemp/
+report
