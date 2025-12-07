@@ -6,7 +6,7 @@ module pll
 (
     input clkin, // 25 MHz, 0 deg
     output clkout0, // 25 MHz, 0 deg
-    output clkout1, // 25 MHz, 90 deg
+    output clkout1, // 25 MHz, 180 deg
     output locked
 );
 (* FREQUENCY_PIN_CLKI="25" *)
@@ -29,7 +29,7 @@ EHXPLLL #(
         .CLKOP_FPHASE(0),
         .CLKOS_ENABLE("ENABLED"),
         .CLKOS_DIV(24),
-        .CLKOS_CPHASE(17),
+        .CLKOS_CPHASE(23),
         .CLKOS_FPHASE(0),
         .FEEDBK_PATH("CLKOP"),
         .CLKFB_DIV(1)

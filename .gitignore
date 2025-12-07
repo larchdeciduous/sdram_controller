@@ -4,3 +4,4 @@ hardware.*
 *.json
 mytemp/
 report
+synth_top.*

@@ -2,14 +2,14 @@
 module sdram_tb (
 );
 
-reg clk, clk90;
+reg clk, clk180;
 initial begin
     clk = 0;
-    clk90 = 0;
+    clk180 = 1;
 end
 always begin
-    #10 clk90 = ~clk90;
-    #10 clk = ~clk;
+    #20 clk180 = ~clk180;
+    clk = ~clk;
 end
 reg locked, enable, write;
 wire [31:0] read_data;
@@ -19,7 +19,8 @@ wire [15:0] SDRAM_DQ;
 wire ready;
 sdram ram(
 .clk(clk),
-.clk90(clk90),
+.clk180(clk180),
+.clk25m(clk),
 .rst(~locked),
 .enable(enable),
 .addr(24'h5555_55),
@@ -43,7 +44,7 @@ sdram ram(
 
 
 initial begin
-	$dumpfile("sdram_tb.vcd");
+    //$dumpfile("sdram_tb.vcd");
     $dumpvars(0, sdram_tb);
     enable = 0;
     locked = 0;
