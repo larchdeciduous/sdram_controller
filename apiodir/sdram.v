@@ -7,13 +7,16 @@ input enable,
 input [23:0] addr,
 input write,
 input [31:0] write_data,
+input [1:0] data_width,
 output [31:0] read_data,
 output reg ready,
+/*
 output [9:0] status_out,
 output cnt_out,
+*/
 
 output SDRAM_CLK,
-output SDRAM_CKE,
+output reg SDRAM_CKE,
 output SDRAM_RAS_N,
 output SDRAM_CAS_N,
 output SDRAM_WE_N,
@@ -52,7 +55,6 @@ reg cntref_en;
 reg [7:0] cntref;
 reg cntlong_en;
 reg [12:0] cntlong;
-assign cnt_out = cntlong_en;
 
 reg if_init_delay;
 reg if_refresh;
@@ -78,10 +80,10 @@ assign { SDRAM_DQMH, SDRAM_DQML } = dqm;
 reg [15:0] dq;
 reg dq_en;
 assign SDRAM_DQ = (dq_en) ? dq : 16'bz;
-reg [12:0] active_row [3:0];
+(* keep *)reg [12:0] active_row [3:0];
 reg [3:0] active_flags;
 wire if_actived;
-assign if_actived = (active_row[addr[23:22]] == addr[21:9]) & (active_flags[addr[32:22]]);
+assign if_actived = (active_row[addr[23:22]] == addr[21:9]) & (active_flags[addr[23:22]]);
 reg r_write;
 reg [15:0] r_write_data [1:0];
 reg [15:0] r_read_data [1:0];
@@ -97,23 +99,28 @@ reg [23:0] r_addr;
 // original order: assign read_data = r_addr[0] ? { r_read_data[1], r_read_data[0] } : { r_read_data[0], r_read_data[1] };
 assign read_data = r_addr[0] ? { r_read_data[0], r_read_data[1] } : { r_read_data[1], r_read_data[0] };
 
+wire [1:0] dqm0, dqm1; // dqm in low active,2 cycle latency, before write need high-z 1 cycle
+reg [1:0] r_data_width;
+assign dqm0 = (r_data_width == 0) ? 2'b10 : 2'b00;
+assign dqm1 = (r_data_width[1]) ? 2'b00 : 2'b11;
+
 wire [1:0] addr_bank;
 wire [12:0] addr_row;
 wire [8:0] addr_col;
 assign addr_bank = r_addr[23:22];
 assign addr_row = r_addr[21:9];
 assign addr_col = r_addr[8:0];
-assign status_out = status;
 always @(posedge clk) begin
     if(rst) begin
         SDRAM_CKE <= 0; command <= C_NOP; SDRAM_A <= 0; SDRAM_BA <= 0; SDRAM_CKE <= 0;
-        ready <= 0; r_write <= 0; dq <= 0; active_flags <= 0; r_read_data[1] <= 0; r_read_data[0] <= 0; dqm <= 0; status <= INIT_1; dq_en <= 0;
+        ready <= 0; r_write <= 0; dq <= 0; active_flags <= 0; r_read_data[1] <= 0; r_read_data[0] <= 0; dqm <= 0; status <= INIT_1; dq_en <= 0; r_data_width <= 0;
         cnt_en <= 0; cnt <= 0; cntref_en <= 0; cntref <= 0;
         cntlong_en <= 0; cnt8ref_en <= 0;
+        active_row[0] <= 0; active_row[1] <= 0; active_row[2] <= 0; active_row[3] <= 0;
     end
     else begin
-        cnt <= (cnt_en) ? cnt + 1'b1 : 4'b0;
-        cntref <= (cntref_en) ? cntref + 1'b1 : 8'b0;
+        cnt <= (cnt_en) ? cnt + 3'b1 : 3'b0;
+        cntref <= (cntref_en) ? cntref + 8'b1 : 8'b0;
         case(status)
             INIT_1: begin
                 command <= C_NOP;
@@ -122,8 +129,9 @@ always @(posedge clk) begin
                 cntlong_en <= 1'b1;
 
                 SDRAM_A[9:0] <= 0; SDRAM_A[12:11] <= 0;
-                ready <= 0; r_write <= 0; dq <= 0; active_flags <= 0; r_read_data[1] <= 0; r_read_data[0] <= 0; dq_en <= 0;
+                ready <= 0; r_write <= 0; dq <= 0; active_flags <= 0; r_read_data[1] <= 0; r_read_data[0] <= 0; dq_en <= 0; r_data_width <= 0;
                 cnt_en <= 0; cnt <= 0; cntref_en <= 0; cntref <= 0;
+                active_row[0] <= 0; active_row[1] <= 0; active_row[2] <= 0; active_row[3] <= 0;
                 cnt8ref_en <= 0;
                 if(if_init_delay) begin
                     command <= C_PRECHARGE;
@@ -215,6 +223,7 @@ always @(posedge clk) begin
                         r_write_data[0] <= addr[0] ? write_data[31:16] : write_data[15:0];
                         r_write_data[1] <= addr[0] ? write_data[15:0] : write_data[31:16];
                         r_addr <= addr;
+                        r_data_width <= data_width;
                     end
 
                     casez ({ enable, write, if_actived })
@@ -260,7 +269,11 @@ always @(posedge clk) begin
                     end
                     3'd1: begin
                         command <= C_NOP;
-                        dqm <= 0;
+                        //dqm <= 0;
+                        dqm <= dqm0;
+                    end
+                    3'd2: begin
+                        dqm <= dqm1;
                     end
                     3'd3: begin
                         dqm <= 2'b11;
@@ -286,11 +299,13 @@ always @(posedge clk) begin
                         SDRAM_BA <= addr_bank;
                         dq <= r_write_data[0];
                         dq_en <= 1'b1;
-                        dqm <= 0;
+                        //dqm <= 0;
+                        dqm <= dqm0;
                     end
                     3'd1: begin
                         command <= C_NOP;
                         dq <= r_write_data[1];
+                        dqm <= dqm1;
                     end
                     3'd2: begin
                         dq_en <= 0;
