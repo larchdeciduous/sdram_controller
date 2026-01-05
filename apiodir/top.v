@@ -1,10 +1,6 @@
-module top (
+module top ( // for on board verification
 input clk,
-/*
-input clk180,
-input clk25m,
-input locked,
-*/
+
 output reg [2:0] led,
 output reg [7:0] debugline,
 
@@ -22,26 +18,30 @@ output SDRAM_DQMH
 );
 
 wire ready;
-wire clk180, clk25m, locked;
+wire locked;
 wire [31:0] read_data;
 reg enable, write, rst;
 reg [31:0] write_data;
-reg [23:0] addr;
-wire [9:0] status_out;
+reg [24:0] addr;
+
+pll pll1
+(
+.clkin(clk), // 25 MHz, 0 deg
+.clkout0(clk25m), // 25 MHz, 0 deg
+.clkout1(clk0), // 100 MHz, 0 deg
+.locked(locked)
+);
 
 sdram ram(
-.clk(clk),
-.clk180(clk180),
-.clk25m(clk),
+.clk(clk0),
 .rst(rst),
 .enable(enable),
 .addr(addr),
 .write(write),
 .write_data(write_data),
+.data_width(2'b10),
 .read_data(read_data),
 .ready(ready),
-.status_out(status_out),
-.cnt_out(cnt_out),
 
 .SDRAM_CLK(SDRAM_CLK),
 .SDRAM_CKE(SDRAM_CKE),
@@ -57,14 +57,6 @@ sdram ram(
 );
 
 
-pll pll1
-(
-.clkin(clk),
-.clkout0(clk25m),
-.clkout1(clk180),
-.locked(locked)
-);
-
 reg [4:0] cnt32;
 reg cnt32_en, cnt32_full;
 always@(posedge clk) begin
@@ -72,20 +64,29 @@ always@(posedge clk) begin
     cnt32_full <= (cnt32 == 5'b11111);
 end
 
-localparam ADDR1 = 24'b1000_0000_0000_0000_0000_0001,
-        ADDR2 = 24'b1000_0010_0000_0000_0000_0001;
+localparam ADDR0 = 0,
+        ADDR1 = 25'b0_1000_0000_0000_0000_0000_0010,
+        ADDR2 = 25'b0_1000_0010_0000_0000_0000_0010,
+        DATA0 = 32'b0001_0010_0011_0100_0101_0110_1000_1000,
+        DATA1 = 32'b0001_0010_0011_0100_0101_0110_0000_0000,
+        DATA2 = 32'b0001_0010_0011_0100_0101_0110_1110_1110;
+
+
 
 reg [31:0] r_read_data;
 reg [3:0] cnt;
 always @(posedge clk) begin
-    if(~locked)
+    if(~locked) begin
         cnt <= 0;
+        led <= 0;
+        rst <= 1'b1;
+    end
     else begin
         case(cnt)
             4'd0: begin
                 rst <= 1'b1;
                 r_read_data <= 0;
-                //led[2] <= 0;
+                led <= 0;
                 enable <= 0;
                 write <= 0;
                 cnt <= 4'd1;
@@ -102,7 +103,7 @@ always @(posedge clk) begin
                 enable <= 1'b1;
                 write <= 1'b1;
                 addr <= 0;
-                write_data <= 32'b0001_0010_0011_0100_0101_0110_1000_1000;
+                write_data <= DATA0;
                 if(ready == 0)
                     cnt<= 4'd4;
             end
@@ -116,7 +117,7 @@ always @(posedge clk) begin
                 enable <= 1'b1;
                 write <= 1'b1;
                 addr <= ADDR1;
-                write_data <= 32'b0001_0010_0011_0100_0101_0110_0000_0000;
+                write_data <= DATA1;
                 if(ready == 0)
                     cnt<= 4'd6;
             end
@@ -130,7 +131,7 @@ always @(posedge clk) begin
                 enable <= 1'b1;
                 write <= 1'b1;
                 addr <= ADDR2;
-                write_data <= 32'b0001_0010_0011_0100_0101_0110_1110_1110;
+                write_data <= DATA2;
                 if(ready == 0)
                     cnt<= 4'd8;
             end
@@ -154,6 +155,7 @@ always @(posedge clk) begin
                 enable <= 0;
                 cnt32_en <= 1'b1;
                 if(cnt32_full) begin
+                    led[0] <= (r_read_data == DATA0);
                     cnt <= 4'd11;
                     cnt32_en <= 0;
                 end
@@ -172,6 +174,7 @@ always @(posedge clk) begin
                 enable <= 0;
                 cnt32_en <= 1'b1;
                 if(cnt32_full) begin
+                    led[1] <= (r_read_data == DATA1);
                     cnt <= 4'd13;
                     cnt32_en <= 0;
                 end
@@ -190,7 +193,8 @@ always @(posedge clk) begin
                 enable <= 0;
                 cnt32_en <= 1'b1;
                 if(cnt32_full) begin
-                    cnt <= 0;
+                    led[2] <= (r_read_data == DATA2);
+                    cnt <= 4'd14;
                     cnt32_en <= 0;
                 end
             end
@@ -203,22 +207,5 @@ reg [3:0] r_dq;
 always @(SDRAM_DQ) begin
     r_dq <= SDRAM_DQ[3:0];
 end
-reg [3:0] debugstatus;
-always @(posedge clk) begin
-    if(~locked)
-        debugstatus <= 0;
-    else begin
-        case (debugstatus)
-            4'd0:begin
-                debugline <= r_read_data[7:0];
-            end
-            4'd3:
-                debugstatus <= 0;
-            default:
-                debugstatus <= debugstatus + 1'b1;
-        endcase
-    end
-end
-    
 
 endmodule

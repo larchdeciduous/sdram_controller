@@ -6,27 +6,23 @@ wire [12:0] SDRAM_A;
 wire [1:0] SDRAM_BA;
 wire [15:0] SDRAM_DQ;
 wire [2:0] led;
-wire [9:0] status_out;
+wire [7:0] debugline;
 
 reg clk, clk180;
 always begin
     clk = 0;
-    clk180 = 1'b1;
     #20;
     clk = 1'b1;
-    clk180 = 0;
     #20;
 end
-assign clk25m = clk;
 
+wire SDRAM_WE_N, SDRAM_CS_N;
 
 reg locked;
 top top1 (
 .clk(clk),
-.clk180(clk180),
-.clk25m(clk25m),
-.locked(locked),
 .led(led),
+.debugline(debugline),
 
 .SDRAM_CLK(SDRAM_CLK),
 .SDRAM_CKE(SDRAM_CKE),
