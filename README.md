@@ -68,3 +68,9 @@ sdram u_sdram (
 | `pll.v`         | PLL instantiation using Lattice ECP5 EHXPLLL primitive.<br>Generates:<br>• `clkout0` = 25 MHz (same as input, 0° phase)<br>• `clkout1` = 100 MHz (0° phase)|
 | `sdram_raw.v`   | Core SDRAM controller |
 | `sdram.v`       | Wrapper around `sdram_raw` that adds support for unaligned 32-bit(when aligned to halfword), 16-bit, and 8-bit accesses.This is the recommended top-level module for integration. |
+## Frequency report
+```nextpnr
+Info: Max frequency for clock              '$glbnet$clk0': 189.83 MHz (PASS at 100.00 MHz)
+```
+
+
