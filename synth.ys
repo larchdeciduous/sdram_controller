@@ -1,4 +1,4 @@
-read_verilog src/*.v src/top_test/*.v pll.v
+read_verilog src/*.v src/top_test/top.v pll.v
 
 #loads ALL ECP5 primitive definitions (blackboxes + sim models)
 read_verilog -lib +/ecp5/*
