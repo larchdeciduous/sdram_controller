@@ -1,9 +1,9 @@
 
-# SDRAM Controller for Lattice ECP5 (Verilog)
+# SDRAM Controller (Verilog)
 
-This is a lightweight, open-source SDRAM controller written in Verilog, targeting Lattice ECP5 FPGAs (e.g., using Lattice Diamond tools). It supports a standard 3.3V SDRAM chip with 16-bit data bus, 13-bit row address, 9-bit column address, and 4 banks (e.g., 64 Mbit or 128 Mbit devices such as AS4C4M16S or similar).
+This is a lightweight, open-source SDRAM controller written in Verilog. It supports a standard 3.3V SDRAM chip with 16-bit data bus, 13-bit row address, 9-bit column address, and 4 banks.
 
-The design consists of a simple PLL to generate the required clocks and a hand-written SDRAM controller with proper initialization, auto-refresh handling, and support for byte, half-word, and word accesses on a 32-bit host interface.
+The design consists of a simple PLL to generate the required clocks and a SDRAM controller with proper initialization, auto-refresh handling, and support for byte, half-word, and word accesses on a 32-bit host interface.
 
 ## Top-level SDRAM Module I/O (`sdram.v`)
 
