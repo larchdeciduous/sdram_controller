@@ -9,8 +9,8 @@ apio.ini
 sim_module/
 top_test/
 *.bit
-*.log
 *.config
 *.lpf
 Makefile
-synth.ys
+*.ys
+*.log
